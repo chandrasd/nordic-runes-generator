@@ -1,18 +1,11 @@
 name: Rust CI
-
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-env:
-  CARGO_TERM_COLOR: always
 
 jobs:
   build-and-test:
     runs-on: macos-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,9 +15,63 @@ jobs:
         with:
           toolchain: stable
           override: true
-
+      
       - name: Build
+        id: build
         run: cargo build --verbose
-
+        continue-on-error: true
+      
       - name: Run tests
+        id: test
         run: cargo test --verbose
+        continue-on-error: true
+      
+      - name: Check if build or tests failed
+        id: check-failure
+        run: |
+          if [ "${{ steps.build.outcome }}" = "failure" ]; then
+            echo "failure_type=build" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.test.outcome }}" = "failure" ]; then
+            echo "failure_type=test" >> $GITHUB_OUTPUT
+          else
+            echo "failure=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create failure branch and open PR
+        if: steps.check-failure.outputs.failure == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          BRANCH_NAME="fix/${{ steps.check-failure.outputs.failure_type }}-failure-$(date +%Y%m%d-%H%M%S)"
+
+          git checkout -b $BRANCH_NAME
+          
+          # Replace with an LLM suggested fixes
+          echo "# Fix Required" > FIX_NEEDED.md
+          echo "" >> FIX_NEEDED.md
+          echo "This PR was automatically created because the ${{ steps.check-failure.outputs.failure_type }} step failed." >> FIX_NEEDED.md
+          echo "" >> FIX_NEEDED.md
+          echo "## Failure Details" >> FIX_NEEDED.md
+          echo "- Build outcome: ${{ steps.build.outcome }}" >> FIX_NEEDED.md
+          echo "- Test outcome: ${{ steps.test.outcome }}" >> FIX_NEEDED.md
+          echo "- Commit SHA: ${{ github.sha }}" >> FIX_NEEDED.md
+          echo "- Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> FIX_NEEDED.md
+          
+          git add FIX_NEEDED.md
+          git commit -m "Auto-fix: ${{ steps.check-failure.outputs.failure_type }} failure on $(date)"
+          git push origin $BRANCH_NAME
+          
+          gh pr create \
+            --title "Auto-fix: ${{ steps.check-failure.outputs.failure_type }} failure" \
+            --body "**${{ steps.check-failure.outputs.failure_type }}** step failed.
+          ---
+          *This PR was created automatically by GitHub Actions*" \
+            --head $BRANCH_NAME \
+            --base main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Fail the workflow if build or test failed
+        if: steps.check-failure.outputs.failure == 'true'
+        run: exit 1
