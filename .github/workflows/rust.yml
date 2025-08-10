@@ -18,12 +18,12 @@ jobs:
           toolchain: stable
           override: true
       
-      - name: Build
+      - name: Build Project
         id: build
         run: cargo build --verbose
         continue-on-error: true
       
-      - name: Run tests
+      - name: Run Tests
         id: test
         run: cargo test --verbose
         continue-on-error: true
@@ -31,10 +31,13 @@ jobs:
       - name: Check if build or tests failed
         id: check-failure
         run: |
-          if [ "${{ steps.build.outcome }}" = "failure" ]; then
-            echo "failure_type=build" >> $GITHUB_OUTPUT
-          elif [ "${{ steps.test.outcome }}" = "failure" ]; then
-            echo "failure_type=test" >> $GITHUB_OUTPUT
+          if [ "${{ steps.build.outcome }}" = "failure" ] || [ "${{ steps.test.outcome }}" = "failure" ]; then
+            echo "failure=true" >> $GITHUB_OUTPUT
+            if [ "${{ steps.build.outcome }}" = "failure" ]; then
+              echo "failure_type=build" >> $GITHUB_OUTPUT
+            elif [ "${{ steps.test.outcome }}" = "failure" ]; then
+              echo "failure_type=test" >> $GITHUB_OUTPUT
+            fi
           else
             echo "failure=false" >> $GITHUB_OUTPUT
           fi
