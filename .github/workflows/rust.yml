@@ -6,8 +6,10 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-and-test:
+  build:
     runs-on: macos-latest
+    outputs:
+      build-success: ${{ steps.build-step.outcome == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,20 +21,42 @@ jobs:
           override: true
       
       - name: Build Project
-        id: build
+        id: build-step
         run: cargo build --verbose
+
+  test:
+    runs-on: macos-latest
+    needs: build
+    if: needs.build.outputs.build-success == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up latest stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       
-      - name: Handle Build Failure
-        if: failure() && steps.build.conclusion == 'failure'
+      - name: Run Tests
+        run: cargo test --verbose
+
+  handle-build-failure:
+    runs-on: macos-latest
+    needs: build
+    if: failure() && needs.build.result == 'failure'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Create Build Failure PR
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
           BRANCH_NAME="fix/build-failure-$(date +%Y%m%d-%H%M%S)"
-
           git checkout -b $BRANCH_NAME
           
-          # Create failure documentation
           echo "# Build Fix Required" > FIX_NEEDED.md
           echo "" >> FIX_NEEDED.md
           echo "This PR was automatically created because the build step failed." >> FIX_NEEDED.md
@@ -54,26 +78,25 @@ jobs:
           *This PR was created automatically by GitHub Actions*" \
             --head $BRANCH_NAME \
             --base main
-          
-          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  handle-test-failure:
+    runs-on: macos-latest
+    needs: [build, test]
+    if: failure() && needs.build.result == 'success' && needs.test.result == 'failure'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-      - name: Run Tests
-        id: test
-        run: cargo test --verbose
-      
-      - name: Handle Test Failure
-        if: failure() && steps.test.conclusion == 'failure'
+      - name: Create Test Failure PR
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
           BRANCH_NAME="fix/test-failure-$(date +%Y%m%d-%H%M%S)"
-
           git checkout -b $BRANCH_NAME
           
-          # Create failure documentation
           echo "# Test Fix Required" > FIX_NEEDED.md
           echo "" >> FIX_NEEDED.md
           echo "This PR was automatically created because the test step failed." >> FIX_NEEDED.md
@@ -95,7 +118,5 @@ jobs:
           *This PR was created automatically by GitHub Actions*" \
             --head $BRANCH_NAME \
             --base main
-          
-          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
