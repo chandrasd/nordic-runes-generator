@@ -92,7 +92,7 @@ jobs:
             --body "**Build** step failed.
           ---
           *This PR was created automatically by GitHub Actions*" \
-            --assignee $REVIEWERS \
+            --reviewer $REVIEWERS \
             --head $BRANCH_NAME \
             --base main
         env:
