@@ -1,12 +1,14 @@
 name: Rust CI
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   build:
@@ -23,7 +25,7 @@ jobs:
         with:
           toolchain: stable
           override: true
-      
+
       - name: Build Project
         id: build-step
         run: cargo build --verbose
@@ -42,7 +44,7 @@ jobs:
         with:
           toolchain: stable
           override: true
-      
+
       - name: Run Tests
         run: cargo test --verbose
 
@@ -54,7 +56,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Create Build Failure PR
         run: |
           git config --local user.email "action@github.com"
@@ -62,7 +64,7 @@ jobs:
 
           BRANCH_NAME="fix/build-failure-$(date +%Y%m%d-%H%M%S)"
           git checkout -b $BRANCH_NAME
-          
+
           echo "# Build Fix Required" > FIX_NEEDED.md
           echo "" >> FIX_NEEDED.md
           echo "This PR was automatically created because the build step failed." >> FIX_NEEDED.md
@@ -72,11 +74,11 @@ jobs:
           echo "- Test outcome: skipped (build failed)" >> FIX_NEEDED.md
           echo "- Commit SHA: ${{ github.sha }}" >> FIX_NEEDED.md
           echo "- Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> FIX_NEEDED.md
-          
+
           git add FIX_NEEDED.md
           git commit -m "Auto-fix: build failure on $(date)"
           git push origin $BRANCH_NAME
-          
+
           gh pr create \
             --title "Auto-fix: build failure" \
             --body "**Build** step failed.
@@ -95,7 +97,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Create Test Failure PR
         run: |
           git config --local user.email "action@github.com"
@@ -103,7 +105,7 @@ jobs:
 
           BRANCH_NAME="fix/test-failure-$(date +%Y%m%d-%H%M%S)"
           git checkout -b $BRANCH_NAME
-          
+
           echo "# Test Fix Required" > FIX_NEEDED.md
           echo "" >> FIX_NEEDED.md
           echo "This PR was automatically created because the test step failed." >> FIX_NEEDED.md
@@ -113,11 +115,11 @@ jobs:
           echo "- Test outcome: failure" >> FIX_NEEDED.md
           echo "- Commit SHA: ${{ github.sha }}" >> FIX_NEEDED.md
           echo "- Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> FIX_NEEDED.md
-          
+
           git add FIX_NEEDED.md
           git commit -m "Auto-fix: test failure on $(date)"
           git push origin $BRANCH_NAME
-          
+
           gh pr create \
             --title "Auto-fix: test failure" \
             --body "**Test** step failed.
