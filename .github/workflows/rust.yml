@@ -92,9 +92,9 @@ jobs:
             --body "**Build** step failed.
           ---
           *This PR was created automatically by GitHub Actions*" \
+            --assignee $REVIEWERS \
             --head $BRANCH_NAME \
             --base main
-            --assignee $REVIEWERS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
