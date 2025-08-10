@@ -7,6 +7,7 @@ env:
 
 jobs:
   build:
+    name: Build Project
     runs-on: macos-latest
     outputs:
       build-success: ${{ steps.build-step.outcome == 'success' }}
@@ -25,6 +26,7 @@ jobs:
         run: cargo build --verbose
 
   test:
+    name: Run Tests
     runs-on: macos-latest
     needs: build
     if: needs.build.outputs.build-success == 'true'
@@ -42,6 +44,7 @@ jobs:
         run: cargo test --verbose
 
   handle-build-failure:
+    name: Handle Build Failure
     runs-on: macos-latest
     needs: build
     if: failure() && needs.build.result == 'failure'
@@ -82,6 +85,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   handle-test-failure:
+    name: Handle Test Failure
     runs-on: macos-latest
     needs: [build, test]
     if: failure() && needs.build.result == 'success' && needs.test.result == 'failure'
