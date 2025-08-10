@@ -61,6 +61,9 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+          COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          COMMIT_AUTHOR_USERNAME=$(gh api /search/users?q=$COMMIT_AUTHOR_EMAIL+in:email --jq '.items[0].login')
 
           BRANCH_NAME="fix/build-failure-$(date +%Y%m%d-%H%M%S)"
           git checkout -b $BRANCH_NAME
@@ -78,6 +81,11 @@ jobs:
           git add FIX_NEEDED.md
           git commit -m "Auto-fix: build failure on $(date)"
           git push origin $BRANCH_NAME
+          
+          REVIEWERS=""
+          if [ -n "$COMMIT_AUTHOR_USERNAME" ] && [ "$COMMIT_AUTHOR_USERNAME" != "github-actions" ]; then
+            REVIEWERS="$COMMIT_AUTHOR_USERNAME"
+          fi
 
           gh pr create \
             --title "Auto-fix: build failure" \
@@ -86,6 +94,7 @@ jobs:
           *This PR was created automatically by GitHub Actions*" \
             --head $BRANCH_NAME \
             --base main
+            --reviewer $REVIEWERS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
