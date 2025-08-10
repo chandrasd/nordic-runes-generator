@@ -94,7 +94,7 @@ jobs:
           *This PR was created automatically by GitHub Actions*" \
             --head $BRANCH_NAME \
             --base main
-            --reviewer $REVIEWERS
+            --assignee $REVIEWERS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
